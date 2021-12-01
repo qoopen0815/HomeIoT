@@ -18,8 +18,8 @@ RTC_DATA_ATTR static uint8_t seq; // 送信SEQ
 
 // Sensor
 #include <UNIT_ENV.h>
-SHT3X sht30;
 QMP6988 qmp;
+SHT3X sht30;
 
 // Other
 #include <esp_sleep.h>
@@ -62,7 +62,7 @@ void setup() {
     M5.Lcd.setCursor(0, 0, 2);
     M5.Lcd.fillScreen(BLACK);   // 背景を黒にする
 
-    Wire.begin(0, 26);          // I2Cを初期化する
+    Wire.begin(0, 26);          // I2Cを初期化する(hat用)
     qmp.init();
 
     if (sht30.get()==0)
@@ -72,7 +72,7 @@ void setup() {
     }
     press = (uint16_t)(qmp.calcPressure() / 100);
     vbat  = (uint16_t)(M5.Axp.GetVbatData() * 1.1 / 10);
-
+    
     M5.Lcd.setCursor(0, 0, 1); 
     M5.Lcd.printf("Temp: %2.2f 'C\r\n",  (float)temp / 100);
     M5.Lcd.printf("Humid: %2.2f %%\r\n",  (float)humid / 100);
