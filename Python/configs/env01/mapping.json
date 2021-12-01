@@ -1,0 +1,9 @@
+{
+    "properties": {
+		"@timestamp": { "type": "date" },
+		"Temp": { "type": "float" },
+		"Humid": { "type": "float" },
+		"Press": { "type": "long" },
+		"Battery": { "type": "float" }
+    }
+}

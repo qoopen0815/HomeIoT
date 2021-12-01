@@ -1,0 +1,10 @@
+{
+    "properties": {
+		"@timestamp": { "type": "date" },
+		"Temp": { "type": "float" },
+		"Humid": { "type": "float" },
+		"Press": { "type": "long" },
+		"TVOC": { "type": "float" },
+		"eCO2": { "type": "float" }
+    }
+}
