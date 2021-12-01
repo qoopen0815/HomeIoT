@@ -25,19 +25,17 @@ class ScanDelegate(DefaultDelegate):
                         self.lastseq = value[4:6]
                         self.lasttime = datetime.now()
                         (temp, humid, press, volt) = struct.unpack('<hhhh', bytes.fromhex(value[6:])) # hは2Byte整数（４つ取り出す）
-                        now = timezone('Asia/Tokyo').localize(datetime.now())
-                        data = {"@timestamp": now,
+                        data = {"@timestamp": timezone('Asia/Tokyo').localize(self.lasttime),
                                 "Temp"  : float(temp/100), "Humid" : float(humid/100), 
                                 "Press" : int(press), "Battery" : float(volt/100)}
                         self.es_handler.sendIndex(data)
-                        # self.es_handler._es.index(index=self.es_handler._index + now.strftime('-%Y.%m.%d'), doc_type=self.es_handler._doctype, id=data['@timestamp'], body=data)
                         print('温度= {0} 度、 湿度= {1} %、 気圧 = {2} hPa、 電圧 = {3} V'.format( temp / 100, humid / 100, press, volt/100))
 
 if __name__ == "__main__":
     path = {'base': None, 'setting': None, 'mapping': None}
     path['base']    = os.path.dirname(os.path.abspath(__file__))
-    path['setting'] = os.path.normpath(os.path.join(path['base'], '../configs/setting.json'))
-    path['mapping'] = os.path.normpath(os.path.join(path['base'], '../configs/mapping.json'))
+    path['setting'] = os.path.normpath(os.path.join(path['base'], '../configs/env01/setting.json'))
+    path['mapping'] = os.path.normpath(os.path.join(path['base'], '../configs/env01/mapping.json'))
     
     handler = ElasticsearchHandler( host="localhost", port=9200,
                                     index="env01", doctype="Env-01",
