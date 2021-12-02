@@ -9,8 +9,11 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #define T_PERIOD 10  // アドバタイジングパケットを送る秒数
-#define S_PERIOD 290 // Deep Sleepする秒数
+#define S_PERIOD 290 // delayする秒数
 RTC_DATA_ATTR static uint8_t seq; // 送信SEQ
+
+BLEServer *pServer;
+BLEAdvertising *pAdvertising;
 
 // Sensor
 #include <Adafruit_SGP30.h>
@@ -23,9 +26,9 @@ SHT3X sht30;
 #include <esp_sleep.h>
 #include <Wire.h>
 
-const bool LCDEnable = false;
-const bool PowerEnable = false;
-const bool SerialEnable = true;
+const bool SerialEnable = false;
+const bool I2CEnable = true;
+const bool DisplayEnable = true;
 
 uint16_t temp;
 uint16_t humid;
@@ -33,7 +36,7 @@ uint16_t press;
 uint16_t tvoc;
 uint16_t eco2;
 
-uint8_t brightness;
+uint8_t brightness = 0x40;
 
 CRGB dispColor(uint8_t g, uint8_t r, uint8_t b) {
   return (CRGB)((g << 16) | (r << 8) | b);
@@ -65,57 +68,76 @@ void setAdvData(BLEAdvertising *pAdvertising) {
     pAdvertising->setAdvertisementData(oAdvertisementData);
 }
 
-void setup() {
-    M5.begin(LCDEnable, PowerEnable, SerialEnable);
-    M5.dis.drawpix(0, dispColor(brightness, brightness, brightness));
-    brightness = 0x40;
-    
-    Serial.begin(115200);
-
-    Wire.begin(26, 32); // I2Cを初期化する
-    qmp.init();
-    
-    if (! sgp30.begin()){
-        if (Serial) Serial.println("SGP30 not found :(");
-        M5.dis.drawpix(0, dispColor(brightness, 0, 0)); // Red: Error
-        while (1);
-    }
+void advData(void * pvParameters) {
+  while(1) { //Keep the thread running.
+    M5.dis.drawpix(0, dispColor(0, brightness, 0));
+    delay(S_PERIOD * 1000);                             // S_PERIOD秒delayする
+    M5.dis.drawpix(0, dispColor(0, 0, brightness));
+    setAdvData(pAdvertising);                           // アドバタイジングデーターをセット
+    pAdvertising->start();                              // アドバタイズ起動
+    delay(T_PERIOD * 1000);                             // T_PERIOD秒アドバタイズする
+    pAdvertising->stop();                               // アドバタイズ停止
+    seq++;                                              // シーケンス番号を更新
+  }
 }
 
-void loop() {
-    M5.dis.drawpix(0, dispColor(0, brightness, 0));
-    if (sht30.get()==0)
-    {
+void readSensor(void * pvParameters) {
+  while(1) {
+    if (sht30.get()==0) {
         temp  = (uint16_t)(sht30.cTemp * 100);
         humid = (uint16_t)(sht30.humidity * 100);
     }
     press = (uint16_t)(qmp.calcPressure() / 100);
-    
     if (! sgp30.IAQmeasure()) {
         if (Serial) Serial.println("SGP30 measurement failed");
         return;
     }
     tvoc = (uint16_t)(sgp30.TVOC);
     eco2 = (uint16_t)(sgp30.eCO2);
-    
-    Serial.printf("Temp: %2.2f 'C\r\n",  (float)temp / 100);
-    Serial.printf("Humid: %2.2f %%\r\n",  (float)humid / 100);
-    Serial.printf("Press: %2.2f hPa\r\n", (float)press);
-    Serial.printf("TVOC: %2.2f ppb\r\n", (float)tvoc);
-    Serial.printf("eCO2: %2.2f ppm\r\n", (float)eco2);
+    delay(5000);
+  }
+}
 
-    BLEDevice::init("Env-02");                          // デバイスを初期化
-    BLEServer *pServer = BLEDevice::createServer();     // サーバーを生成
+void setup() {
+  M5.begin(SerialEnable, I2CEnable, DisplayEnable);
+  M5.dis.drawpix(0, dispColor(brightness, brightness, brightness));
+  
+  Serial.begin(115200);
+  Wire.begin(26, 32); // I2Cを初期化する
 
-    BLEAdvertising *pAdvertising = pServer->getAdvertising();   // アドバタイズオブジェクトを取得
-    setAdvData(pAdvertising);                           // アドバタイジングデーターをセット
+  BLEDevice::init("Env-02");                  // デバイスを初期化
+  pServer = BLEDevice::createServer();        // サーバーを生成
+  pAdvertising = pServer->getAdvertising();   // アドバタイズオブジェクトを取得
 
-    pAdvertising->start();                              // アドバタイズ起動
-    M5.dis.drawpix(0, dispColor(0, 0, brightness));
-    delay(T_PERIOD * 1000);                             // T_PERIOD秒アドバタイズする
-    pAdvertising->stop();                               // アドバタイズ停止
-    M5.dis.drawpix(0, dispColor(0, brightness, 0));
+  delay(3000);
 
-    seq++;                                              // シーケンス番号を更新
-    delay(S_PERIOD * 1000);                             // S_PERIOD秒delayする
+  qmp.init();
+  if (! sgp30.begin()){
+      if (Serial) Serial.println("SGP30 not found :(");
+      M5.dis.drawpix(0, dispColor(brightness, 0, 0)); // Red: Error
+      while (1);
+  }
+
+  // Creat Task1.  创建线程1
+  xTaskCreatePinnedToCore(
+                  advData,     //Function to implement the task.  线程对应函数名称(不能有返回值)
+                  "task1",   //线程名称
+                  4096,      // The size of the task stack specified as the number of * bytes.任务堆栈的大小(字节)
+                  NULL,      // Pointer that will be used as the parameter for the task * being created.  创建作为任务输入参数的指针
+                  1,         // Priority of the task.  任务的优先级
+                  NULL,      // Task handler.  任务句柄
+                  0);        // Core where the task should run.  将任务挂载到指定内核
+
+  // Task 2
+  xTaskCreatePinnedToCore(
+                  readSensor,
+                  "task2",
+                  4096,
+                  NULL,
+                  2,
+                  NULL,
+                  0);
+}
+
+void loop() {
 }
