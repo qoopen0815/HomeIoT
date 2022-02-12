@@ -135,6 +135,13 @@ processors:
 # Sets log level. The default log level is info.
 # Available log levels are: error, warning, info, debug
 #logging.level: debug
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /home/iotsystem/SD32/log/metricbeat
+  name: metricbeat
+  keepfiles: 7
+  permissions: 0644
 
 # At debug level, you can selectively enable logging only for some components.
 # To enable all selectors use ["*"]. Examples of other selectors are "beat",

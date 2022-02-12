@@ -99,3 +99,7 @@ transport.tcp.port: 9300
 # Refer to the following documentation for instructions.
 #
 # https://www.elastic.co/guide/en/elasticsearch/reference/7.16/configuring-stack-security.html
+
+# X-Pack
+xpack.security.enabled: true
+# xpack.security.authc.api_key.enabled: true
