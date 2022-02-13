@@ -92,17 +92,17 @@ setup.kibana:
 output.elasticsearch:
   # Array of hosts to connect to.
   hosts: ["localhost:9200"]
-  ilm.enabled: true
-  ilm.rollover_alias: "metricbeat"
-  ilm.pattern: "{now/d}-000007"
+  setup.ilm.enabled: auto
+  setup.ilm.rollover_alias: "metricbeat"
+  setup.ilm.pattern: "{now/d}-000001"
 
   # Protocol - either `http` (default) or `https`.
   #protocol: "https"
 
   # Authentication credentials - either API key or username/password.
   #api_key: "id:api_key"
-  #username: "elastic"
-  #password: "changeme"
+  username: "elastic"
+  password: "xwIiTITNmXtV4MFCU5bl"
 
 # ------------------------------ Logstash Output -------------------------------
 #output.logstash:
@@ -138,7 +138,7 @@ processors:
 logging.level: info
 logging.to_files: true
 logging.files:
-  path: /home/iotsystem/SD32/log/metricbeat
+  path: /home/iotsystem/DataStorage/log/metricbeat
   name: metricbeat
   keepfiles: 7
   permissions: 0644
